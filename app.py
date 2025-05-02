@@ -8,13 +8,15 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'palabra_secreta_por_defecto')
 
 # Categorías de palabras
-CATEGORIAS = [
-    {"id": 1, "nombre": "Animales de la selva", "descripcion": "Ingresa nombres de animales que viven en la selva"},
-    {"id": 2, "nombre": "Palabras que empiezan con A", "descripcion": "Ingresa palabras que comiencen con la letra A"},
-    {"id": 3, "nombre": "Ciudades de Europa", "descripcion": "Ingresa nombres de ciudades europeas"},
-    {"id": 4, "nombre": "Frutas y verduras", "descripcion": "Ingresa nombres de frutas o verduras"},
-    {"id": 5, "nombre": "Países del mundo", "descripcion": "Ingresa nombres de países"}
-]
+# Letras con mayor cantidad de palabras en español
+LETRAS_PRODUCTIVAS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'V']
+
+def generar_categoria_aleatoria():
+    letra = random.choice(LETRAS_PRODUCTIVAS)
+    return {
+        "nombre": f"Palabras que empiezan con {letra}",
+        "descripcion": f"Ingresa palabras que comiencen con la letra {letra}"
+    }
 
 # Función para cargar el ranking
 def cargar_ranking():
@@ -60,33 +62,33 @@ def guardar_log(usuario, categoria, palabras, puntuacion):
 
 @app.route('/')
 def index():
-    return render_template('index.html', categorias=CATEGORIAS)
+    ranking = cargar_ranking()
+    return render_template('index.html', ranking=ranking)
 
-@app.route('/juego/<int:categoria_id>')
-def juego(categoria_id):
-    categoria = next((cat for cat in CATEGORIAS if cat["id"] == categoria_id), None)
-    if not categoria:
+@app.route('/juego/<categoria>')
+def juego(categoria):
+    if categoria == 'random':
+        categoria = generar_categoria_aleatoria()
+    else:
         return redirect(url_for('index'))
     
-    return render_template('juego.html', categoria=categoria)
+    return render_template('juego.html', categoria=categoria['nombre'])
 
-@app.route('/guardar_resultado', methods=['POST'])
-def guardar_resultado():
+@app.route('/guardar_puntuacion', methods=['POST'])
+def guardar_puntuacion():
     datos = request.json
-    usuario = datos.get('usuario', 'Anónimo')
-    categoria_id = datos.get('categoria_id')
-    palabras = datos.get('palabras', [])
-    puntuacion = len(palabras)
+    nombre = datos.get('nombre')
+    puntuacion = datos.get('puntuacion')
+    categoria = datos.get('categoria')
     
-    categoria = next((cat for cat in CATEGORIAS if cat["id"] == categoria_id), None)
-    if not categoria:
-        return jsonify({"error": "Categoría no válida"}), 400
+    if not nombre or not puntuacion or not categoria:
+        return jsonify({"error": "Datos incompletos"}), 400
     
     # Guardar en ranking
     ranking = cargar_ranking()
     nuevo_entry = {
-        "usuario": usuario,
-        "categoria": categoria["nombre"],
+        "nombre": nombre,
+        "categoria": categoria,
         "puntuacion": puntuacion,
         "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
@@ -96,20 +98,7 @@ def guardar_resultado():
     ranking = sorted(ranking, key=lambda x: x["puntuacion"], reverse=True)
     guardar_ranking(ranking)
     
-    # Guardar en log
-    guardar_log(usuario, categoria["nombre"], palabras, puntuacion)
-    
-    return jsonify({"success": True, "posicion": ranking.index(nuevo_entry) + 1})
-
-@app.route('/ranking')
-def ranking():
-    ranking_data = cargar_ranking()
-    return render_template('ranking.html', ranking=ranking_data)
-
-@app.route('/get_random_category')
-def get_random_category():
-    categoria = random.choice(CATEGORIAS)
-    return jsonify(categoria)
+    return jsonify({"success": True, "ranking": ranking})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
