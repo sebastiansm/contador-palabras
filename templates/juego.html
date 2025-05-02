@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ categoria.nombre }} - Contador de Palabras</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>{{ categoria.nombre }}</h1>
+            <p>{{ categoria.descripcion }}</p>
+        </header>
+        
+        <section id="juego-section" class="juego-section">
+            <div class="tiempo-container">
+                <div id="tiempo">60</div>
+                <div>segundos</div>
+            </div>
+            
+            <div class="input-container">
+                <input type="text" id="palabra-input" placeholder="Escribe aquí..." autofocus>
+                <button id="agregar-btn">Agregar</button>
+            </div>
+            
+            <div class="palabras-container">
+                <h3>Palabras (<span id="contador">0</span>):</h3>
+                <ul id="lista-palabras"></ul>
+            </div>
+            
+            <div id="juego-controles">
+                <button id="iniciar-btn" class="btn btn-primary">Iniciar Juego</button>
+            </div>
+        </section>
+        
+        <section id="verificacion-section" class="verificacion-section hidden">
+            <h2>Verifica tus palabras</h2>
+            <p>Marca las palabras que no cumplen con la categoría "{{ categoria.nombre }}"</p>
+            
+            <div class="verificacion-lista">
+                <ul id="verificacion-palabras"></ul>
+            </div>
+            
+            <div class="verificacion-controles">
+                <button id="guardar-btn" class="btn btn-primary">Guardar Resultado</button>
+            </div>
+        </section>
+        
+        <section id="resultado-section" class="resultado-section hidden">
+            <h2>¡Juego Terminado!</h2>
+            <p>Has ingresado <span id="total-palabras">0</span> palabras válidas.</p>
+            
+            <div class="usuario-input">
+                <label for="nombre-usuario">Tu nombre:</label>
+                <input type="text" id="nombre-usuario" placeholder="Anónimo">
+            </div>
+            
+            <div class="resultado-controles">
+                <button id="guardar-ranking-btn" class="btn btn-primary">Guardar en Ranking</button>
+            </div>
+            
+            <div id="resultado-ranking" class="hidden">
+                <p>¡Tu resultado ha sido guardado! Posición en el ranking: <span id="posicion-ranking">0</span></p>
+                <div class="botones-final">
+                    <a href="{{ url_for('index') }}" class="btn">Volver al inicio</a>
+                    <a href="{{ url_for('ranking') }}" class="btn btn-ranking">Ver Ranking</a>
+                </div>
+            </div>
+        </section>
+    </div>
+    
+    <script>
+        const categoriaId = {{ categoria.id }};
+        let palabras = [];
+        let juegoCorriendo = false;
+        let tiempoRestante = 60;
+        let intervaloTiempo;
+        
+        const tiempoElement = document.getElementById('tiempo');
+        const contadorElement = document.getElementById('contador');
+        const palabraInput = document.getElementById('palabra-input');
+        const agregarBtn = document.getElementById('agregar-btn');
+        const listaPalabras = document.getElementById('lista-palabras');
+        const iniciarBtn = document.getElementById('iniciar-btn');
+        const juegoSection = document.getElementById('juego-section');
+        const verificacionSection = document.getElementById('verificacion-section');
+        const verificacionPalabras = document.getElementById('verificacion-palabras');
+        const guardarBtn = document.getElementById('guardar-btn');
+        const resultadoSection = document.getElementById('resultado-section');
+        const totalPalabras = document.getElementById('total-palabras');
+        const nombreUsuario = document.getElementById('nombre-usuario');
+        const guardarRankingBtn = document.getElementById('guardar-ranking-btn');
+        const resultadoRanking = document.getElementById('resultado-ranking');
+        const posicionRanking = document.getElementById('posicion-ranking');
+        
+        // Iniciar juego
+        iniciarBtn.addEventListener('click', function() {
+            iniciarJuego();
+        });
+        
+        function iniciarJuego() {
+            juegoCorriendo = true;
+            palabras = [];
+            tiempoRestante = 60;
+            updatePalabrasList();
+            
+            iniciarBtn.disabled = true;
+            palabraInput.disabled = false;
+            agregarBtn.disabled = false;
+            palabraInput.focus();
+            
+            intervaloTiempo = setInterval(function() {
+                tiempoRestante--;
+                tiempoElement.textContent = tiempoRestante;
+                
+                if (tiempoRestante <= 0) {
+                    finalizarJuego();
+                }
+            }, 1000);
+        }
+        
+        // Agregar palabra
+        function agregarPalabra() {
+            if (!juegoCorriendo) return;
+            
+            const palabra = palabraInput.value.trim().toLowerCase();
+            if (palabra && !palabras.includes(palabra)) {
+                palabras.push(palabra);
+                palabraInput.value = '';
+                updatePalabrasList();
+            }
+            palabraInput.focus();
+        }
+        
+        agregarBtn.addEventListener('click', agregarPalabra);
+        palabraInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                agregarPalabra();
+            }
+        });
+        
+        function updatePalabrasList() {
+            listaPalabras.innerHTML = '';
+            palabras.forEach(palabra => {
+                const li = document.createElement('li');
+                li.textContent = palabra;
+                listaPalabras.appendChild(li);
+            });
+            contadorElement.textContent = palabras.length;
+        }
+        
+        // Finalizar juego
+        function finalizarJuego() {
+            clearInterval(intervaloTiempo);
+            juegoCorriendo = false;
+            
+            palabraInput.disabled = true;
+            agregarBtn.disabled = true;
+            iniciarBtn.disabled = false;
+            iniciarBtn.textContent = 'Reiniciar Juego';
+            
+            // Mostrar sección de verificación
+            juegoSection.classList.add('hidden');
+            verificacionSection.classList.remove('hidden');
+            
+            // Llenar la lista de verificación
+            verificacionPalabras.innerHTML = '';
+            palabras.forEach((palabra, index) => {
+                const li = document.createElement('li');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `palabra-${index}`;
+                checkbox.dataset.index = index;
+                
+                const label = document.createElement('label');
+                label.htmlFor = `palabra-${index}`;
+                label.textContent = palabra;
+                
+                li.appendChild(checkbox);
+                li.appendChild(label);
+                verificacionPalabras.appendChild(li);
+            });
+        }
+        
+        // Guardar resultado
+        guardarBtn.addEventListener('click', function() {
+            // Filtrar palabras inválidas (las que están marcadas)
+            const invalidIndexes = Array.from(document.querySelectorAll('#verificacion-palabras input[type="checkbox"]:checked'))
+                .map(checkbox => parseInt(checkbox.dataset.index));
+            
+            const palabrasValidas = palabras.filter((_, index) => !invalidIndexes.includes(index));
+            
+            // Mostrar sección de resultado
+            verificacionSection.classList.add('hidden');
+            resultadoSection.classList.remove('hidden');
+            totalPalabras.textContent = palabrasValidas.length;
+            
+            // Guardar palabras válidas para enviar al servidor
+            palabras = palabrasValidas;
+        });
+        
+        // Guardar en ranking
+        guardarRankingBtn.addEventListener('click', function() {
+            const usuario = nombreUsuario.value.trim() || 'Anónimo';
+            
+            fetch('/guardar_resultado', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    usuario: usuario,
+                    categoria_id: categoriaId,
+                    palabras: palabras
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    guardarRankingBtn.disabled = true;
+                    resultadoRanking.classList.remove('hidden');
+                    posicionRanking.textContent = data.posicion;
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranking - Contador de Palabras</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ranking de Jugadores</h1>
+            <p>Los mejores resultados de todos los tiempos</p>
+        </header>
+        
+        <section class="ranking-section">
+            {% if ranking %}
+                <table class="ranking-table">
+                    <thead>
+                        <tr>
+                            <th>Posición</th>
+                            <th>Usuario</th>
+                            <th>Categoría</th>
+                            <th>Palabras</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in ranking %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ item.usuario }}</td>
+                            <td>{{ item.categoria }}</td>
+                            <td>{{ item.puntuacion }}</td>
+                            <td>{{ item.fecha }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="no-ranking">
+                    <p>Aún no hay resultados en el ranking.</p>
+                </div>
+            {% endif %}
+        </section>
+        
+        <footer>
+            <a href="{{ url_for('index') }}" class="btn">Volver al inicio</a>
+        </footer>
+    </div>
+</body>
+</html> 

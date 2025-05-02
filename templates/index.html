@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contador de Palabras</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Juego de Palabras</h1>
+            <p>¡Escribe tantas palabras como puedas en 60 segundos!</p>
+        </header>
+        
+        <section class="categorias">
+            <h2>Selecciona una categoría</h2>
+            <div class="categoria-grid">
+                {% for categoria in categorias %}
+                <div class="categoria-card">
+                    <h3>{{ categoria.nombre }}</h3>
+                    <p>{{ categoria.descripcion }}</p>
+                    <a href="{{ url_for('juego', categoria_id=categoria.id) }}" class="btn">Jugar</a>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="categoria-card categoria-random">
+                <h3>Categoría aleatoria</h3>
+                <p>Selecciona una categoría al azar</p>
+                <button id="btn-random" class="btn">¡Sorpréndeme!</button>
+            </div>
+        </section>
+        
+        <footer>
+            <a href="{{ url_for('ranking') }}" class="btn btn-ranking">Ver Ranking</a>
+        </footer>
+    </div>
+
+    <script>
+        document.getElementById('btn-random').addEventListener('click', function() {
+            fetch('/get_random_category')
+                .then(response => response.json())
+                .then(data => {
+                    window.location.href = `/juego/${data.id}`;
+                });
+        });
+    </script>
+</body>
+</html> 
